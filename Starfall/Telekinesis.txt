@@ -1,0 +1,147 @@
+--@name Telekinesis
+--@server
+
+
+KEYS = {}
+KEYS["reload"]  = 8192
+KEYS["attack1"] = 1
+KEYS["attack2"] = 2048
+
+
+ORBIT = {}
+ORBIT["Speed"]     = 5
+ORBIT["Height"]    = 200
+ORBIT["Distance"]  = 200
+ORBIT["Angle"]     = 0
+ORBIT["propLimit"] = 35
+ORBIT["toggle"]    = false
+
+
+GrabbedProps = {}
+
+function _cos(degrees)
+    return math.cos(math.rad(degrees))
+end
+
+function _sin(degrees)
+    return math.sin(math.rad(degrees))
+end
+
+function isCrowbar(weapon)
+    local crowbar = "crowbar.mdl"
+    weaponModel = weapon:getModel()
+    
+    return string.endsWith(weaponModel, crowbar)
+end
+
+
+
+function changeEntity(entity)
+    entity:setTrails(255, 255, 25, "trails/laser", Color(255, 255, 255))
+end
+
+
+
+function KeyListener(ply, key, down)
+    if(ply == owner()) then
+        local weaponEntity = ply:getActiveWeapon()
+        if(isCrowbar(weaponEntity)) then
+
+            
+            if(key == KEYS["attack2"]) then
+                local entityEye = ply:getEyeTrace()["Entity"]
+                
+                local isOwnerEntity = (entityEye:getOwner() == ply)
+                local isFrozen = not (entityEye:isFrozen())
+                local isAlreadyExist = not table.hasValue(GrabbedProps, entityEye)
+                
+                if(isOwnerEntity && isFrozen && isAlreadyExist) then
+                    changeEntity(entityEye)
+                    table.insert(GrabbedProps, entityEye)
+                end
+                
+                --print(table.count(GrabbedProps))
+            end
+            
+            
+            if(key == KEYS["reload"] && down == true) then
+                table.empty(GrabbedProps)
+                --print("propsList cleaned")
+            end
+           
+            
+            if(key == KEYS["attack1"]) then
+                if(down == true) then
+                    ORBIT["toggle"] = true
+                else
+                    ORBIT["toggle"] = false
+                end
+            end
+            
+            
+            return nil
+        end
+        ORBIT["toggle"] = false
+    end
+end
+
+
+function orbitEffect()
+    ORBIT["Angle"] = ORBIT["Speed"] + ORBIT["Angle"]
+    local SeparationAngle = 360 / table.count(GrabbedProps)
+    for index, entity in ipairs(GrabbedProps) do
+        
+        local OffsetAngle = ORBIT["Angle"] + SeparationAngle * index
+        local newVector = Vector(ORBIT["Distance"] * _cos(OffsetAngle),
+                                 ORBIT["Distance"] * _sin(OffsetAngle),
+                                 ORBIT["Height"])
+        local TargetPos =  owner():getPos() + newVector
+        
+        local succ, result = pcall(
+             function()
+                 local ForceVec  = (TargetPos - entity:getPos() - entity:getVelocity() * 0.25) * entity:getMass()
+                 entity:applyForceCenter(ForceVec) -- Smooth movement
+                 --entity:setPos(TargetPos) -- Teleporting movement
+             end)
+        
+        if(not succ) then
+            table.remove(GrabbedProps, index)
+            continue
+        end 
+    end
+    
+end
+
+
+
+function orbitAttack()
+    for index, entity in ipairs(GrabbedProps) do
+        local TargetPos = owner():getEyeTrace()["HitPos"]
+        
+        local succ, result = pcall(
+            function()
+                local ForceVec  = (TargetPos - entity:getPos()) * entity:getMass()
+                entity:applyForceCenter(ForceVec)
+            end)
+        
+        if(not succ) then
+            table.remove(GrabbedProps, index)
+            continue
+        end
+    end
+    
+end
+
+
+
+hook.add("KeyPress",   "", function(ply, key) KeyListener(ply, key, true)  end)
+hook.add("KeyRelease", "", function(ply, key) KeyListener(ply, key, false) end)
+
+
+hook.add("tick", "", function()
+    if(ORBIT["toggle"]) then
+        orbitAttack()
+    else 
+        orbitEffect()
+    end
+end)
