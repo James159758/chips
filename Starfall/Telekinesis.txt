@@ -19,13 +19,17 @@ ORBIT["toggle"]    = false
 
 GrabbedProps = {}
 
+
+
 function _cos(degrees)
     return math.cos(math.rad(degrees))
 end
 
+
 function _sin(degrees)
     return math.sin(math.rad(degrees))
 end
+
 
 function isCrowbar(weapon)
     local crowbar = "crowbar.mdl"
@@ -35,11 +39,9 @@ function isCrowbar(weapon)
 end
 
 
-
 function changeEntity(entity)
     entity:setTrails(255, 255, 25, "trails/laser", Color(255, 255, 255))
 end
-
 
 
 function KeyListener(ply, key, down)
@@ -108,10 +110,8 @@ function orbitEffect()
             table.remove(GrabbedProps, index)
             continue
         end 
-    end
-    
+    end    
 end
-
 
 
 function orbitAttack()
@@ -128,13 +128,14 @@ function orbitAttack()
             table.remove(GrabbedProps, index)
             continue
         end
-    end
-    
+    end    
 end
 
 
 
 hook.add("KeyPress",   "", function(ply, key) KeyListener(ply, key, true)  end)
+
+
 hook.add("KeyRelease", "", function(ply, key) KeyListener(ply, key, false) end)
 
 
