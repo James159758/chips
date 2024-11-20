@@ -13,7 +13,6 @@ ORBIT["Speed"]     = 5
 ORBIT["Height"]    = 200
 ORBIT["Distance"]  = 200
 ORBIT["Angle"]     = 0
-ORBIT["propLimit"] = 35
 ORBIT["toggle"]    = false
 
 
