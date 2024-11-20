@@ -1,0 +1,121 @@
+@name Telekinesis
+@strict
+@persist GrabbedProps:array ORBIT:table
+
+
+ORBIT = table()
+ORBIT["Speed"]    = 1
+ORBIT["Height"]   = 200
+ORBIT["Distance"] = 200
+ORBIT["Angle"]    = 0
+ORBIT["toggle"]   = 0
+
+
+
+function isCrowbar(Weapon:entity){
+    let WeaponType = Weapon:type()
+    
+    return WeaponType == "weapon_crowbar"
+}
+
+
+function hasValue(T:array, E:entity){
+    foreach(Index:number, Value:entity = T){
+        if(Value == E){
+            return 1
+        }
+    }
+    return 0
+}
+
+
+function changeEntity(E:entity){
+    E:setTrails(255, 255, 25, "trails/laser", vec(255, 255, 255), 255)
+}
+
+
+function keyListener(Player:entity, Key:string, Down:number){
+    if(Player == owner()){
+        let WeaponEntity = Player:weapon()
+        if(isCrowbar(WeaponEntity)){
+            
+            if(Key == "attack2" && Down == 1){
+                let PickedEntity = Player:eyeTrace():entity()
+                if(!PickedEntity){
+                    return void
+                }
+                
+                let IsOwnerEntity = (PickedEntity:owner() == Player)
+                let IsFrozen = !PickedEntity:isFrozen()
+                let IsAlreadyExist = !hasValue(GrabbedProps, PickedEntity)
+                
+                if(IsOwnerEntity && IsFrozen && IsAlreadyExist){
+                    changeEntity(PickedEntity)
+                    GrabbedProps:pushEntity(PickedEntity)
+                }
+            }
+            
+            elseif(Key == "reload" && Down == 1){
+                GrabbedProps:clear()
+            }
+            
+            elseif(Key == "attack"){
+                if(Down == 1){
+                    ORBIT["toggle"] = 1
+                } else {
+                    ORBIT["toggle"] = 0
+                }
+            }
+            
+            
+            return void
+        }
+        ORBIT["toggle"] = 0
+    }
+}
+
+
+function orbitEffect(){
+    ORBIT["Angle"] = ORBIT["Speed", number] + ORBIT["Angle", number]
+    let SeparationAngle = 360 / GrabbedProps:count()
+    foreach(Index:number, Prop:entity = GrabbedProps){
+        let OffsetAngle = ORBIT["Angle", number] + SeparationAngle * Index
+        let NewVector = vec(ORBIT["Distance", number] * cos(OffsetAngle),
+                            ORBIT["Distance", number] * sin(OffsetAngle),
+                            ORBIT["Height", number])
+        let TargetPos = owner():pos() + NewVector
+        try {
+            let ForceVec  = (TargetPos - Prop:pos() - Prop:vel() * 0.25) * Prop:mass()
+            Prop:applyForce(ForceVec)
+        } catch(E:string){
+            GrabbedProps:removeEntity(Index)    
+        }
+    }
+}
+
+
+function orbitAttack(){
+    TargetPos = owner():eyeTrace():pos()
+    foreach(Index:number, Prop:entity = GrabbedProps){
+        try{
+            let ForceVec = (TargetPos - Prop:pos()) * Prop:mass()
+            Prop:applyForce(ForceVec)
+        } catch(E:string){
+            GrabbedProps:removeEntity(Index)
+        }
+    }
+}
+
+
+
+event keyPressed(Player:entity, Key:string, Down:number, Bind:string){keyListener(Player, Bind, Down)}
+
+
+event tick(){
+    if(ORBIT["toggle", number] == 1){
+        orbitAttack()
+    } else {
+        orbitEffect()
+    }
+}
+
