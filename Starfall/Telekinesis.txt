@@ -1,147 +1,219 @@
 --@name Telekinesis
---@server
-
-
-KEYS = {}
-KEYS["reload"]  = 8192
-KEYS["attack1"] = 1
-KEYS["attack2"] = 2048
-
-
-ORBIT = {}
-ORBIT["Speed"]     = 5
-ORBIT["Height"]    = 200
-ORBIT["Distance"]  = 200
-ORBIT["Angle"]     = 0
-ORBIT["toggle"]    = false
-
-
-GrabbedProps = {}
+--@shared
 
 
 
-function _cos(degrees)
-    return math.cos(math.rad(degrees))
+clientVar = function()
+    KEYS = {}
+    KEYS["reload"]  = 28
+    KEYS["attack1"] = 107
+    KEYS["attack2"] = 108
+    KEYS["attack3"] = 109
+
+
 end
 
 
-function _sin(degrees)
-    return math.sin(math.rad(degrees))
-end
-
-
-function isCrowbar(weapon)
-    local crowbar = "crowbar.mdl"
-    weaponModel = weapon:getModel()
+serverVar = function()
+    ORBIT = {}
+    ORBIT["Speed"]     = 5
+    ORBIT["Height"]    = 200
+    ORBIT["Distance"]  = 200
+    ORBIT["Angle"]     = 0
+    ORBIT["toggle"]    = false
     
-    return string.endsWith(weaponModel, crowbar)
+    
+    GrabbedProps = {}
 end
 
-
-function changeEntity(entity)
-    entity:setTrails(255, 255, 25, "trails/laser", Color(255, 255, 255))
-end
-
-
-function KeyListener(ply, key, down)
-    if(ply == owner()) then
-        local weaponEntity = ply:getActiveWeapon()
-        if(isCrowbar(weaponEntity)) then
-
-            
-            if(key == KEYS["attack2"]) then
-                local entityEye = ply:getEyeTrace()["Entity"]
-                
-                local isOwnerEntity = (entityEye:getOwner() == ply)
-                local isFrozen = not (entityEye:isFrozen())
-                local isAlreadyExist = not table.hasValue(GrabbedProps, entityEye)
-                
-                if(isOwnerEntity && isFrozen && isAlreadyExist) then
-                    changeEntity(entityEye)
-                    table.insert(GrabbedProps, entityEye)
-                end
-                
-                --print(table.count(GrabbedProps))
-            end
-            
-            
-            if(key == KEYS["reload"] && down == true) then
-                table.empty(GrabbedProps)
-                --print("propsList cleaned")
-            end
-           
-            
-            if(key == KEYS["attack1"]) then
-                if(down == true) then
-                    ORBIT["toggle"] = true
-                else
-                    ORBIT["toggle"] = false
-                end
-            end
-            
-            
-            return nil
-        end
-        ORBIT["toggle"] = false
+local mainClient = function()
+    clientVar()
+    
+    
+    local function sendData(data)
+        net.start("connection")
+        net.writeTable(data)
+        net.send()
     end
-end
-
-
-function orbitEffect()
-    ORBIT["Angle"] = ORBIT["Speed"] + ORBIT["Angle"]
-    local SeparationAngle = 360 / table.count(GrabbedProps)
-    for index, entity in ipairs(GrabbedProps) do
+    
+    
+    local function addElement(ply)
+        local data = {flag = "addElement"}
         
-        local OffsetAngle = ORBIT["Angle"] + SeparationAngle * index
-        local newVector = Vector(ORBIT["Distance"] * _cos(OffsetAngle),
-                                 ORBIT["Distance"] * _sin(OffsetAngle),
-                                 ORBIT["Height"])
-        local TargetPos =  owner():getPos() + newVector
+        data["ply"] = ply
         
-        local succ, result = pcall(
-             function()
-                 local ForceVec  = (TargetPos - entity:getPos() - entity:getVelocity() * 0.25) * entity:getMass()
-                 entity:applyForceCenter(ForceVec) -- Smooth movement
-                 --entity:setPos(TargetPos) -- Teleporting movement
-             end)
-        
-        if(not succ) then
-            table.remove(GrabbedProps, index)
-            continue
-        end 
-    end    
-end
-
-
-function orbitAttack()
-    for index, entity in ipairs(GrabbedProps) do
-        local TargetPos = owner():getEyeTrace()["HitPos"]
-        
-        local succ, result = pcall(
-            function()
-                local ForceVec  = (TargetPos - entity:getPos()) * entity:getMass()
-                entity:applyForceCenter(ForceVec)
-            end)
-        
-        if(not succ) then
-            table.remove(GrabbedProps, index)
-            continue
-        end
-    end    
-end
-
-
-
-hook.add("KeyPress",   "", function(ply, key) KeyListener(ply, key, true)  end)
-
-
-hook.add("KeyRelease", "", function(ply, key) KeyListener(ply, key, false) end)
-
-
-hook.add("tick", "", function()
-    if(ORBIT["toggle"]) then
-        orbitAttack()
-    else 
-        orbitEffect()
+        sendData(data)
     end
-end)
+    
+    
+    local function reset()
+        local data = {flag = "reset"}
+        
+        sendData(data)
+    end
+
+
+    local function toggle(switch)
+        local data = {flag = "toggle"}
+        
+        data["switch"] = switch
+        
+        sendData(data)
+    end
+    
+    
+    
+    local function isWeapon(weapon)
+        local _find = "crowbar.mdl"
+        local weaponModel = weapon:getModel()
+
+        return string.endsWith(weaponModel, _find)
+    end
+    
+    
+    local function keyManager(ply, key, down)
+        if(ply == owner()) then
+            local weaponEntity = ply:getActiveWeapon()
+            if isWeapon(weaponEntity) then
+                
+                if(key == KEYS["attack2"] && down == true) then
+                    addElement(ply)
+                
+                
+                elseif(key == KEYS["reload"] && down == true) then
+                    reset()
+               
+                
+                elseif(key == KEYS["attack1"]) then
+                    toggle(down)
+                    
+                    
+                end
+                return nil
+            end
+            toggle(false)
+        end
+    end
+
+
+
+    hook.add("inputPressed",  "", function(key) keyManager(owner(), key, true)  end)
+    hook.add("inputReleased", "", function(key) keyManager(owner(), key, false) end)
+end
+
+
+local mainServer = function()
+    serverVar()
+    
+    
+    
+    
+    local function addElement(ply)
+        print(table.count(GrabbedProps))
+        local entityEye = ply:getEyeTrace()["Entity"]
+    
+        local isOwnerEntity = (entityEye:getOwner() == ply)
+        local isFrozen = not (entityEye:isFrozen())
+        local isAlreadyExist = not table.hasValue(GrabbedProps, entityEye)
+        
+        if(isOwnerEntity && isFrozen && isAlreadyExist) then
+            table.insert(GrabbedProps, entityEye)
+        end
+    end
+    
+    
+    local function resetTable()
+        table.empty(GrabbedProps)
+    end
+    
+    
+    local function toggle(switch)
+        ORBIT["toggle"] = switch
+    end
+
+
+    local function _cos(degrees)
+        return math.cos(math.rad(degrees))
+    end
+
+
+    local function _sin(degrees)
+        return math.sin(math.rad(degrees))
+    end
+
+
+    function orbitEffect()
+        ORBIT["Angle"] = (ORBIT["Speed"] + ORBIT["Angle"]) % 360
+        local SeparationAngle = 360 / table.count(GrabbedProps)
+        for index, entity in ipairs(GrabbedProps) do
+            
+            local OffsetAngle = ORBIT["Angle"] + SeparationAngle * index
+            local newVector = Vector(ORBIT["Distance"] * _cos(OffsetAngle),
+                                     ORBIT["Distance"] * _sin(OffsetAngle),
+                                     ORBIT["Height"])
+            local TargetPos =  owner():getPos() + newVector
+            
+            local succ, result = pcall(
+                 function()
+                     local ForceVec  = (TargetPos - entity:getPos() - entity:getVelocity() * 0.25) * entity:getMass()
+                     entity:applyForceCenter(ForceVec) -- Smooth movement
+                     --entity:setPos(TargetPos) -- Teleporting movement
+                 end)
+            
+            if(not succ) then
+                table.remove(GrabbedProps, index)
+                continue
+            end 
+        end    
+    end
+
+
+    function orbitAttack()
+        for index, entity in ipairs(GrabbedProps) do
+            local TargetPos = owner():getEyeTrace()["HitPos"]
+            
+            local succ, result = pcall(
+                function()
+                    local ForceVec  = (TargetPos - entity:getPos()) * entity:getMass()
+                    entity:applyForceCenter(ForceVec)
+                end)
+            
+            if(not succ) then
+                table.remove(GrabbedProps, index)
+                continue
+            end
+        end    
+    end
+    
+    
+    
+    
+    net.receive("connection", function()
+        local data = net.readTable()
+        if(data["flag"] == "addElement") then
+            addElement(data["ply"])
+        elseif(data["flag"] == "reset") then
+            resetTable()
+        elseif(data["flag"] == "toggle") then
+            toggle(data["switch"])         
+        end
+    end)
+    
+    
+    hook.add("tick", "", function()
+        if(ORBIT["toggle"]) then
+            orbitAttack()
+        else 
+            orbitEffect()
+        end
+    end)
+end
+
+
+
+
+if SERVER then
+    mainServer()
+else
+    mainClient()
+end
