@@ -109,7 +109,6 @@ local mainServer = function()
     
     
     local function addElement(ply)
-        print(table.count(GrabbedProps))
         local entityEye = ply:getEyeTrace()["Entity"]
     
         local isOwnerEntity = (entityEye:getOwner() == ply)
