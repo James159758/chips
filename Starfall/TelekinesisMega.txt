@@ -88,20 +88,22 @@ local mainClient = function()
                 
                 elseif(key == KEYS["reload"] && down == true) then
                     reset()
-               
-                
-                elseif(key == KEYS["attack1"]) then
-                    toggle(down)
                     
                     
                 elseif(key == KEYS["attack3"] && down == true) then
                     explodePing()
-                    
-                    
+                
+                
+                elseif(key == KEYS["attack1"]) then
+                    if(down == true) then
+                        toggle(true)
+                    else
+                        toggle(false)
+                    end   
                 end
                 return nil
             end
-            toggle(false)
+            --toggle(false)
         end
     end
 
@@ -128,13 +130,13 @@ local mainServer = function()
         
         
         
-       --pcall(entity.setColor, entity, (toggle and Color(0, 0, 0, 0) or Color(255, 255, 255)))
-       --pcall(entity.setNoDraw, entity, (toggle == true))
+       pcall(entity.setColor, entity, (toggle and Color(0, 0, 0, 0) or Color(255, 255, 255)))
+       pcall(entity.setNoDraw, entity, (toggle == true))
        
-       --pcall(entity.setDrawShadow, entity, (toggle == false))
-       --pcall(entity.setRenderMode, entity, (toggle and 6 or 0))
+       pcall(entity.setDrawShadow, entity, (toggle == false))
+       pcall(entity.setRenderMode, entity, (toggle and 6 or 0))
         
-       --pcall(function() entity:setMaterial((toggle and "Models/effects/vol_light001" or entity:getMaterials()[1])) end)
+       pcall(function() entity:setMaterial((toggle and "Models/effects/vol_light001" or entity:getMaterials()[1])) end)
         
         
         
@@ -218,7 +220,6 @@ local mainServer = function()
                      entity:applyForceCenter(ForceVec) -- Smooth movement
                      --entity:setPos(TargetPos) -- Teleporting movement
                  end)
-            
             if(not succ) then
                 table.remove(GrabbedProps, index)
                 continue
@@ -260,7 +261,10 @@ local mainServer = function()
         end
     end
     
-    net.receive("connection", function()
+    net.receive("connection", function(len, ply)
+        if(ply != owner()) then
+            return nil
+        end
         local data = net.readTable()
         if(data["flag"] == "addElement") then
             addElement(data["ply"])
