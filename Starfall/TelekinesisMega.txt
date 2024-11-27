@@ -1,0 +1,293 @@
+--@name TelekinesisMega
+--@shared
+
+
+
+clientVar = function()
+    KEYS = {}
+    KEYS["reload"]  = 28
+    KEYS["attack1"] = 107
+    KEYS["attack2"] = 108
+    KEYS["attack3"] = 109
+
+
+end
+
+
+serverVar = function()
+    ORBIT = {}
+    ORBIT["Speed"]     = 5
+    ORBIT["Height"]    = 200
+    ORBIT["Distance"]  = 200
+    ORBIT["Angle"]     = 0
+    ORBIT["toggle"]    = false
+    
+    
+    GrabbedProps = {}
+end
+
+local mainClient = function()
+    clientVar()
+    
+    
+    local function sendData(data)
+        net.start("connection")
+        net.writeTable(data)
+        net.send()
+    end
+    
+    
+    local function addElement(ply)
+        local data = {flag = "addElement"}
+        
+        data["ply"] = ply
+        
+        sendData(data)
+    end
+    
+    
+    local function reset()
+        local data = {flag = "reset"}
+        
+        sendData(data)
+    end
+
+
+    local function toggle(switch)
+        local data = {flag = "toggle"}
+        
+        data["switch"] = switch
+        
+        sendData(data)
+    end
+    
+    
+    local function explodePing()
+        local data = {flag = "explode"}
+        
+        sendData(data)
+    end
+    
+    
+    local function isWeapon(weapon)
+        local _find = "crowbar.mdl"
+        local weaponModel = weapon:getModel()
+
+        return string.endsWith(weaponModel, _find)
+    end
+    
+    
+    local function keyManager(ply, key, down)
+        if(ply == owner()) then
+            local weaponEntity = ply:getActiveWeapon()
+            if isWeapon(weaponEntity) then
+                
+                if(key == KEYS["attack2"] && down == true) then
+                    addElement(ply)
+                
+                
+                elseif(key == KEYS["reload"] && down == true) then
+                    reset()
+               
+                
+                elseif(key == KEYS["attack1"]) then
+                    toggle(down)
+                    
+                    
+                elseif(key == KEYS["attack3"] && down == true) then
+                    explodePing()
+                    
+                    
+                end
+                return nil
+            end
+            toggle(false)
+        end
+    end
+
+
+
+    hook.add("inputPressed",  "", function(key) keyManager(owner(), key, true)  end)
+    hook.add("inputReleased", "", function(key) keyManager(owner(), key, false) end)
+end
+
+
+local mainServer = function()
+    serverVar()
+    
+    
+    
+    local function addEffect(entity)
+        pcall(entity.setTrails, entity, 255, 255, 25, "trails/laser", Color(255, 255, 255))
+    end
+    
+    
+    local function switchEntityHide(entity, toggle)
+       pcall(entity.setCollisionGroup, entity, (toggle and 20 or 0))
+       pcall(entity.setContents, entity, (toggle and 0 or 1))
+        
+        
+        
+       --pcall(entity.setColor, entity, (toggle and Color(0, 0, 0, 0) or Color(255, 255, 255)))
+       --pcall(entity.setNoDraw, entity, (toggle == true))
+       
+       --pcall(entity.setDrawShadow, entity, (toggle == false))
+       --pcall(entity.setRenderMode, entity, (toggle and 6 or 0))
+        
+       --pcall(function() entity:setMaterial((toggle and "Models/effects/vol_light001" or entity:getMaterials()[1])) end)
+        
+        
+        
+    end
+    
+    
+    local function switchEntityDamage(entity, toggle)
+       pcall(function()
+                 local physObj = entity:getPhysicsObject()
+                 if(toggle) then
+                     physObj.addGameFlags(512)
+                 else
+                     physObj.clearGameFlags(512)
+                 end
+             end)
+        
+        pcall(function()
+                  local entityMass = entity:getMass()
+                  entity:setMass(toggle and (entityMass / 1000) or (entityMass * 1000))
+              end)
+            
+        pcall(function()
+                  local entityVelocity = entity:getVelocity()
+                  entity:setVelocity(toggle and (entityVelocity / 1000) or (entityVelocity * 1000))
+              end)
+    end
+    
+    
+    local function addElement(ply)
+        local entityEye = ply:getEyeTrace()["Entity"]
+        
+        if(entityEye:isNPC()) then return end
+        
+        local isOwnerEntity = (entityEye:getOwner() == ply)
+        local isFrozen = not (entityEye:isFrozen())
+        local isAlreadyExist = not table.hasValue(GrabbedProps, entityEye)
+        
+        if(isOwnerEntity && isFrozen && isAlreadyExist) then
+            table.insert(GrabbedProps, entityEye)
+        end
+    end
+    
+    
+    local function resetTable()
+        table.empty(GrabbedProps)
+    end
+    
+    
+    local function toggle(switch)
+        ORBIT["toggle"] = switch
+    end
+
+
+    local function _cos(degrees)
+        return math.cos(math.rad(degrees))
+    end
+
+
+    local function _sin(degrees)
+        return math.sin(math.rad(degrees))
+    end
+
+
+    local function orbitEffect()
+        ORBIT["Angle"] = (ORBIT["Speed"] + ORBIT["Angle"]) % 360
+        local SeparationAngle = 360 / table.count(GrabbedProps)
+        for index, entity in ipairs(GrabbedProps) do
+            switchEntityHide(entity, true)
+            switchEntityDamage(entity, true)
+            
+            
+            local OffsetAngle = ORBIT["Angle"] + SeparationAngle * index
+            local newVector = Vector(ORBIT["Distance"] * _cos(OffsetAngle),
+                                     ORBIT["Distance"] * _sin(OffsetAngle),
+                                     ORBIT["Height"])
+            local TargetPos =  owner():getPos() + newVector
+            
+            local succ, result = pcall(
+                 function()
+                     local ForceVec  = (TargetPos - entity:getPos() - entity:getVelocity() * 0.25) * entity:getMass()
+                     entity:applyForceCenter(ForceVec) -- Smooth movement
+                     --entity:setPos(TargetPos) -- Teleporting movement
+                 end)
+            
+            if(not succ) then
+                table.remove(GrabbedProps, index)
+                continue
+            end 
+        end    
+    end
+
+
+    local function orbitAttack()
+        for index, entity in ipairs(GrabbedProps) do
+            switchEntityHide(entity, false)
+            switchEntityDamage(entity, false)
+            
+            local TargetPos = owner():getEyeTrace()["HitPos"]
+            local succ, result = pcall(
+                function()
+                    local ForceVec  = (TargetPos - entity:getPos()) * entity:getMass()
+                    entity:applyForceCenter(ForceVec)
+                end)
+            
+            if(not succ) then
+                table.remove(GrabbedProps, index)
+                continue
+            end
+        end    
+    end
+    
+    
+    local function explodePing()
+        for index, entity in ipairs(GrabbedProps) do
+            local succ, result = pcall(
+                function()
+                    prop.create(entity:getPos(), entity:getAngles(), "models/props_phx/oildrum001_explosive.mdl", true):breakEnt()
+                end)
+            if(not succ) then
+                table.remove(GrabbedProps, index)
+                continue
+            end
+        end
+    end
+    
+    net.receive("connection", function()
+        local data = net.readTable()
+        if(data["flag"] == "addElement") then
+            addElement(data["ply"])
+        elseif(data["flag"] == "reset") then
+            resetTable()
+        elseif(data["flag"] == "toggle") then
+            toggle(data["switch"])
+        elseif(data["flag"] == "explode") then
+            explodePing()         
+        end
+    end)
+    
+    
+    hook.add("tick", "", function()
+        if(ORBIT["toggle"]) then
+            orbitAttack()
+        else 
+            orbitEffect()
+        end
+    end)
+end
+
+
+
+
+if SERVER then
+    mainServer()
+else
+    mainClient()
+end
