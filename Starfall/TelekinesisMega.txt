@@ -103,7 +103,7 @@ local mainClient = function()
                 end
                 return nil
             end
-            --toggle(false)
+            toggle(false)
         end
     end
 
