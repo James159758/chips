@@ -69,11 +69,11 @@ local mainClient = function()
     end
     
     
-    local function isWeapon(weapon)
+    local function isWeapon(ply)
         local _find = "crowbar.mdl"
         suc, resu = pcall(function()
                               local weaponEntity = ply:getActiveWeapon()
-                              local weaponModel = weapon:getModel()
+                              local weaponModel = weaponEntity:getModel()
                             return string.endsWith(weaponModel, _find)
                           end)
 
