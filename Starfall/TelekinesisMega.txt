@@ -71,16 +71,19 @@ local mainClient = function()
     
     local function isWeapon(weapon)
         local _find = "crowbar.mdl"
-        local weaponModel = weapon:getModel()
+        suc, resu = pcall(function()
+                              local weaponEntity = ply:getActiveWeapon()
+                              local weaponModel = weapon:getModel()
+                            return string.endsWith(weaponModel, _find)
+                          end)
 
-        return string.endsWith(weaponModel, _find)
+        return resu
     end
     
     
     local function keyManager(ply, key, down)
         if(ply == owner()) then
-            local weaponEntity = ply:getActiveWeapon()
-            if isWeapon(weaponEntity) then
+            if isWeapon(ply) then
                 
                 if(key == KEYS["attack2"] && down == true) then
                     addElement(ply)
@@ -124,9 +127,13 @@ local mainServer = function()
     end
     
     
+    local function collisionEntity(entity, toggle)
+           pcall(entity.setCollisionGroup, entity, (toggle and 20 or 0))
+           pcall(entity.setContents, entity, (toggle and 0 or 1))
+    end
+    
+    
     local function switchEntityHide(entity, toggle)
-       pcall(entity.setCollisionGroup, entity, (toggle and 20 or 0))
-       pcall(entity.setContents, entity, (toggle and 0 or 1))
         
         
         
@@ -147,12 +154,11 @@ local mainServer = function()
        pcall(function()
                  local physObj = entity:getPhysicsObject()
                  if(toggle) then
-                     physObj.addGameFlags(512)
+                    physObj:clearGameFlags(512)
                  else
-                     physObj.clearGameFlags(512)
+                    physObj:addGameFlags(512)
                  end
-             end)
-        
+            end)
         pcall(function()
                   local entityMass = entity:getMass()
                   entity:setMass(toggle and (entityMass / 1000) or (entityMass * 1000))
@@ -204,6 +210,7 @@ local mainServer = function()
         ORBIT["Angle"] = (ORBIT["Speed"] + ORBIT["Angle"]) % 360
         local SeparationAngle = 360 / table.count(GrabbedProps)
         for index, entity in ipairs(GrabbedProps) do
+            collisionEntity(entity, true)
             switchEntityHide(entity, true)
             switchEntityDamage(entity, true)
             
@@ -230,7 +237,8 @@ local mainServer = function()
 
     local function orbitAttack()
         for index, entity in ipairs(GrabbedProps) do
-            switchEntityHide(entity, false)
+            collisionEntity(entity, false)
+            --switchEntityHide(entity, false)
             switchEntityDamage(entity, false)
             
             local TargetPos = owner():getEyeTrace()["HitPos"]
