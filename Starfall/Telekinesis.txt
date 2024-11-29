@@ -8,7 +8,6 @@ clientVar = function()
     KEYS["reload"]  = 28
     KEYS["attack1"] = 107
     KEYS["attack2"] = 108
-    KEYS["attack3"] = 109
 
 
 end
@@ -62,19 +61,21 @@ local mainClient = function()
     end
     
     
-    
-    local function isWeapon(weapon)
+    local function isWeapon(ply)
         local _find = "crowbar.mdl"
-        local weaponModel = weapon:getModel()
+        suc, resu = pcall(function()
+                              local weaponEntity = ply:getActiveWeapon()
+                              local weaponModel = weaponEntity:getModel()
+                            return string.endsWith(weaponModel, _find)
+                          end)
 
-        return string.endsWith(weaponModel, _find)
+        return resu
     end
     
     
     local function keyManager(ply, key, down)
         if(ply == owner()) then
-            local weaponEntity = ply:getActiveWeapon()
-            if isWeapon(weaponEntity) then
+            if isWeapon(ply) then
                 
                 if(key == KEYS["attack2"] && down == true) then
                     addElement(ply)
@@ -82,12 +83,14 @@ local mainClient = function()
                 
                 elseif(key == KEYS["reload"] && down == true) then
                     reset()
-               
+                
                 
                 elseif(key == KEYS["attack1"]) then
-                    toggle(down)
-                    
-                    
+                    if(down == true) then
+                        toggle(true)
+                    else
+                        toggle(false)
+                    end   
                 end
                 return nil
             end
@@ -106,11 +109,11 @@ local mainServer = function()
     serverVar()
     
     
-    
-    
     local function addElement(ply)
         local entityEye = ply:getEyeTrace()["Entity"]
-    
+        
+        if(entityEye:isNPC()) then return end
+        
         local isOwnerEntity = (entityEye:getOwner() == ply)
         local isFrozen = not (entityEye:isFrozen())
         local isAlreadyExist = not table.hasValue(GrabbedProps, entityEye)
@@ -141,10 +144,11 @@ local mainServer = function()
     end
 
 
-    function orbitEffect()
+    local function orbitEffect()
         ORBIT["Angle"] = (ORBIT["Speed"] + ORBIT["Angle"]) % 360
         local SeparationAngle = 360 / table.count(GrabbedProps)
         for index, entity in ipairs(GrabbedProps) do
+            
             
             local OffsetAngle = ORBIT["Angle"] + SeparationAngle * index
             local newVector = Vector(ORBIT["Distance"] * _cos(OffsetAngle),
@@ -158,7 +162,6 @@ local mainServer = function()
                      entity:applyForceCenter(ForceVec) -- Smooth movement
                      --entity:setPos(TargetPos) -- Teleporting movement
                  end)
-            
             if(not succ) then
                 table.remove(GrabbedProps, index)
                 continue
@@ -167,10 +170,10 @@ local mainServer = function()
     end
 
 
-    function orbitAttack()
+    local function orbitAttack()
         for index, entity in ipairs(GrabbedProps) do
-            local TargetPos = owner():getEyeTrace()["HitPos"]
             
+            local TargetPos = owner():getEyeTrace()["HitPos"]
             local succ, result = pcall(
                 function()
                     local ForceVec  = (TargetPos - entity:getPos()) * entity:getMass()
@@ -186,15 +189,17 @@ local mainServer = function()
     
     
     
-    
-    net.receive("connection", function()
+    net.receive("connection", function(len, ply)
+        if(ply != owner()) then
+            return nil
+        end
         local data = net.readTable()
         if(data["flag"] == "addElement") then
             addElement(data["ply"])
         elseif(data["flag"] == "reset") then
             resetTable()
         elseif(data["flag"] == "toggle") then
-            toggle(data["switch"])         
+            toggle(data["switch"])        
         end
     end)
     
