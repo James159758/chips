@@ -12,10 +12,11 @@ ORBIT["toggle"]   = 0
 
 
 
-function isCrowbar(Weapon:entity){
+function isCrowbar(Ply:entity){
+    let Weapon = Player:weapon()
     let WeaponType = Weapon:type()
-    
-    return WeaponType == "weapon_crowbar"
+    let Item = "weapon_crowbar"
+    return WeaponType == Item
 }
 
 
@@ -49,8 +50,7 @@ function getRange(){
 
 function keyListener(Player:entity, Key:string, Down:number){
     if(Player == owner()){
-        let WeaponEntity = Player:weapon()
-        if(isCrowbar(WeaponEntity)){
+        if(isWeapon(Player)){
             
             if(Key == "attack2" && Down == 1){
                 let PickedEntity = getRange():entity()
