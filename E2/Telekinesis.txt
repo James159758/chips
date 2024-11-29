@@ -30,9 +30,22 @@ function hasValue(T:array, E:entity){
 
 
 function changeEntity(E:entity){
-    E:setTrails(255, 255, 25, "trails/laser", vec(255, 255, 255), 255)
+    #E:setTrails(255, 255, 25, "trails/laser", vec(255, 255, 255), 255)
+    ##setfLight(vector pos,vector color,angle ang,string material,number fov,number farz,number nearz)
+    #E:setfLight(E:pos(), vec(255, 255, 255), E:angles(), "models/alyx/emptool_glow", 999, 999, 999)
+    ##entity:setdLight(vector pos,vector color,number brightness,number size,number delay)
+    ##E:setdLight(E:pos(), vec(255, 255, 255), 999, 999, 1)
 }
 
+
+function getRange(){
+    #[
+    rangerFilter(GrabbedProps)
+    rangerFilter(owner())
+    let RangerData = rangerOffset(16384, owner():shootPos(), owner():eye())
+    ]#
+    return owner():eyeTrace()
+}
 
 function keyListener(Player:entity, Key:string, Down:number){
     if(Player == owner()){
@@ -40,11 +53,10 @@ function keyListener(Player:entity, Key:string, Down:number){
         if(isCrowbar(WeaponEntity)){
             
             if(Key == "attack2" && Down == 1){
-                let PickedEntity = Player:eyeTrace():entity()
+                let PickedEntity = getRange():entity()
                 if(!PickedEntity){
                     return void
                 }
-                
                 let IsOwnerEntity = (PickedEntity:owner() == Player)
                 let IsFrozen = !PickedEntity:isFrozen()
                 let IsAlreadyExist = !hasValue(GrabbedProps, PickedEntity)
@@ -95,7 +107,7 @@ function orbitEffect(){
 
 
 function orbitAttack(){
-    TargetPos = owner():eyeTrace():pos()
+    TargetPos = getRange():pos()
     foreach(Index:number, Prop:entity = GrabbedProps){
         try{
             let ForceVec = (TargetPos - Prop:pos()) * Prop:mass()
