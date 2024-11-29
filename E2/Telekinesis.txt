@@ -12,8 +12,8 @@ ORBIT["toggle"]   = 0
 
 
 
-function isCrowbar(Ply:entity){
-    let Weapon = Player:weapon()
+function isWeapon(Ply:entity){
+    let Weapon = Ply:weapon()
     let WeaponType = Weapon:type()
     let Item = "weapon_crowbar"
     return WeaponType == Item
@@ -88,7 +88,7 @@ function keyListener(Player:entity, Key:string, Down:number){
 
 
 function orbitEffect(){
-    ORBIT["Angle"] = ORBIT["Speed", number] + ORBIT["Angle", number]
+    ORBIT["Angle"] = (ORBIT["Speed", number] + ORBIT["Angle", number]) % 360
     let SeparationAngle = 360 / GrabbedProps:count()
     foreach(Index:number, Prop:entity = GrabbedProps){
         let OffsetAngle = ORBIT["Angle", number] + SeparationAngle * Index
