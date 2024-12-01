@@ -3,7 +3,7 @@
 
 
 
-clientVar = function()
+local clientVar = function()
     KEYS = {}
     KEYS["reload"]  = 28
     KEYS["attack1"] = 107
@@ -14,7 +14,7 @@ clientVar = function()
 end
 
 
-serverVar = function()
+local serverVar = function()
     ORBIT = {}
     ORBIT["Speed"]     = 5
     ORBIT["Height"]    = 200
@@ -71,7 +71,7 @@ local mainClient = function()
     
     local function isWeapon(ply)
         local _find = "crowbar.mdl"
-        suc, resu = pcall(function()
+        local suc, resu = pcall(function()
                               local weaponEntity = ply:getActiveWeapon()
                               local weaponModel = weaponEntity:getModel()
                             return string.endsWith(weaponModel, _find)
@@ -85,15 +85,15 @@ local mainClient = function()
         if(ply == owner()) then
             if isWeapon(ply) then
                 
-                if(key == KEYS["attack2"] && down == true) then
+                if(key == KEYS["attack2"] and down == true) then
                     addElement(ply)
                 
                 
-                elseif(key == KEYS["reload"] && down == true) then
+                elseif(key == KEYS["reload"] and down == true) then
                     reset()
                     
                     
-                elseif(key == KEYS["attack3"] && down == true) then
+                elseif(key == KEYS["attack3"] and down == true) then
                     explodePing()
                 
                 
@@ -180,7 +180,7 @@ local mainServer = function()
         local isFrozen = not (entityEye:isFrozen())
         local isAlreadyExist = not table.hasValue(GrabbedProps, entityEye)
         
-        if(isOwnerEntity && isFrozen && isAlreadyExist) then
+        if(isOwnerEntity and isFrozen and isAlreadyExist) then
             table.insert(GrabbedProps, entityEye)
         end
     end
@@ -270,7 +270,7 @@ local mainServer = function()
     end
     
     net.receive("connection", function(len, ply)
-        if(ply != owner()) then
+        if(ply ~= owner()) then
             return nil
         end
         local data = net.readTable()
@@ -281,7 +281,7 @@ local mainServer = function()
         elseif(data["flag"] == "toggle") then
             toggle(data["switch"])
         elseif(data["flag"] == "explode") then
-            explodePing()         
+            explodePing()        
         end
     end)
     
