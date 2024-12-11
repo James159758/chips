@@ -1,0 +1,217 @@
+@name spawnKiller
+@persist PoolSteamID:array PoolSteamEntity:table I:number KillEntity:entity Chip:entity
+@strict
+
+#[
+write /kill SteamID
+
+Feel free to improve it
+]#
+
+RespawnKillEntity = function(){
+    local KillEntity = propSpawn("models/hunter/plates/plate.mdl", 0)
+    KillEntity:setRenderMode(10)
+    KillEntity:propShadow(0)
+    KillEntity:setMass(1e9)
+    KillEntity:propSetVelocity(vec(0, 0, 0))
+    KillEntity:setPos(vec(0, 0, 0))
+
+    return KillEntity
+}
+
+function number hasValue(T:array, E:string){
+    foreach(_:number, Value:string = T){
+        if(Value == E){
+            return 1
+        }
+    }
+    return 0
+}
+
+
+function number removeValue(T:array, E:string){
+    foreach(Index:number, Value:string = T){
+        if(Value == E){
+            T:removeEntity(Index)
+        }
+    }
+    return 0
+}
+
+
+function void kill(Index:number, Ply:entity){
+    
+    
+    local HoloKill = function(Mode:number){
+        local Holo = holoCreate(Index, Ply:pos(), vec(0, 0, 0), Ply:angles())
+        if(Mode == 1){
+            local ExplosiveProp = propSpawn("models/props_phx/oildrum001_explosive.mdl", Holo:pos(), 1)
+            
+            ExplosiveProp:propBreak()
+        }
+        elseif(Mode == 2){
+            
+            #Holo:explosion()
+        }
+    }
+    
+    # Player is going to be killed by world
+    local PropKill = function(){
+        if(!KillEntity){
+            KillEntity = RespawnKillEntity()[entity]
+            
+        }
+        local AboveHead = Ply:pos() + vec(0, 0, 74)
+        KillEntity:setPos(AboveHead)
+        KillEntity:applyForce(vec(0,0,0))
+    }
+    
+    
+    PropKill()
+}
+
+
+function void tick(){
+    if(I > PoolSteamID:count()){I = 1}
+    if(PoolSteamID:count() == 0){return}
+    
+
+    local SteamID = PoolSteamID[I, string]
+    local Player  = PoolSteamEntity[SteamID, entity]
+    
+    
+    if(!Player:isValid()){
+        PoolSteamID:removeEntity(I)
+        PoolSteamEntity:removeEntity(SteamID)
+        
+        print("removed " + SteamID + "| notValid")
+        holoDeleteAll()
+        return
+    }
+    elseif(Player:inGodMode()){
+        PoolSteamID:removeEntity(I)
+        PoolSteamEntity:removeEntity(SteamID)
+        
+        print("removed " + SteamID + "| GodMode")
+        holoDeleteAll()
+        return
+    }
+    
+    
+    if(Player:isAlive()){
+        kill(I, Player)
+    }
+    I = I + 1
+}
+
+
+function void chatFilter(Player:entity, Message:string, _:number){
+    if(Player == owner()){
+        local FormatedString = Message:explode(" ")
+        
+        if(FormatedString[1, string] == "/kill"){
+            if(FormatedString[2, string] == "myself"){
+                FormatedString[2, string] = owner():steamID()
+            }
+            local SteamId = FormatedString[2, string]
+            local Player  = findPlayerBySteamID(SteamId)
+            if(!Player){
+                print("Can't find the Player")
+                return
+            }
+            
+            #print(PoolSteamID:count(), PoolSteamEntity:count())
+            if(hasValue(PoolSteamID, SteamId)){
+                removeValue(PoolSteamID, SteamId)
+                PoolSteamEntity:removeEntity(SteamId)
+                
+                print("removed " + SteamId)
+            } else {
+                PoolSteamID:pushString(SteamId)
+                PoolSteamEntity[SteamId] = Player
+                
+                print("added " + SteamId)
+            }
+            
+            #print(PoolSteamID:count(), PoolSteamEntity:count())
+            holoDeleteAll()
+            print("Holograms are deleted")
+        }    
+    }
+}
+
+
+function void tick_(){
+    if(I > PoolSteamID:count()){I = 1}
+    if(PoolSteamID:count() == 0){return}
+    
+    local SteamID = PoolSteamID[I, string]
+    local Player  = PoolSteamEntity[SteamID, entity]
+    
+    
+    if(!Player:isValid()){
+        PoolSteamID:removeEntity(I)
+        PoolSteamEntity:removeEntity(SteamID)
+        
+        print("removed " + SteamID + "| notValid")
+        holoDeleteAll()
+        return
+    }
+    elseif(Player:inGodMode()){
+        PoolSteamID:removeEntity(I)
+        PoolSteamEntity:removeEntity(SteamID)
+        
+        print("removed " + SteamID + "| GodMode")
+        holoDeleteAll()
+        return
+    }
+    
+    
+    if(Player:isAlive()){
+        kill(I, Player)
+    }
+    I = I + 1
+}
+
+
+function void tryToHide(Chip:entity){
+    #ifdef entity():setMaterial()
+        Chip:setMaterial("models/effects/vol_light002")
+    #endif
+    #ifdef entity():setRenderMode()
+        Chip:setRenderMode(10)
+    #endif
+    #ifdef entity():propShadow()
+        Chip:propShadow(0)
+    #endif
+    #ifdef entity():setPos()
+        Chip:setPos(vec(0, 0, 0))
+    #endif
+    #ifdef hideMyAss()
+        hideMyAss(1)
+    #endif
+}
+
+function void main(){
+    Chip = owner():eyeTrace():entity()
+    tryToHide(Chip)
+    
+    PoolSteamEntity = table()
+    PoolSteamID = array()
+    I = 1
+    
+    
+    KillEntity = RespawnKillEntity()[entity]
+    
+}
+
+
+
+event chat(Player:entity, Message:string, Team:number){chatFilter(Player, Message, Team)}
+
+
+if(first()){main()}
+tick_()
+timer("tick", 250)
+
+
