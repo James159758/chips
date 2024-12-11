@@ -1,0 +1,43 @@
+--@server
+
+--local players = find.byClass("npc_*")
+local players = find.allPlayers()
+local effects = {}
+local I = 1
+
+for i = 1, #players, 1 do
+    effects[i] = effect.create()
+end
+
+
+timer.create("trace", 0.018, 0, function()
+    if (I > #effects) then
+        I = 1
+    end
+    
+    local ply = players[I]
+    local _effect = effects[I]
+    
+    _effect:setStart(owner():getPos())
+    _effect:setOrigin(ply:getPos())
+    _effect:setNormal(ply:getPos())
+    _effect:play("ToolTracer")
+    
+    I = I + 1
+end)
+
+
+hook.add("PlayerConnect", "", function(networkid, name, userid, isbot)
+    local ply = find.playerBySteamID(networkid)
+    local _effect = effect.create()
+    
+    table.insert(players, ply)
+    table.insert(effects, _effect)
+end)
+
+hook.add("PlayerDisconnect", "", function(networkid, name, player, reason, isbot)
+    local ply = player
+    
+    table.removeByValue(players, ply)
+    table.remove(effects, #effects)
+end)
