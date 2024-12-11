@@ -1,0 +1,60 @@
+@persist Players:array EffectsPool:array I:number
+
+function number hasValue(T:array, E:entity){
+    local Result = -1
+    foreach(Index:number, Value:entity = T){
+        if(Value == E){
+            Result = Index
+            break
+        }
+    }
+    return Result
+}
+
+function void main(){
+
+    EffectsPool = array()
+    #findByClass("npc_barney")
+    #Players = findToArray()
+    Players = players()
+    I = 1
+    for(_=1, Players:count(), 1){
+        EffectsPool:pushEffect(effect())
+    }
+
+}
+
+function void tick_(){
+    if(I > Players:count()){I = 1}
+    Ply = Players[I, entity]
+    print(Ply, I)
+    E = EffectsPool[I, effect]
+    
+    E:setStart(owner():pos())
+    E:setNormal(owner():pos())
+    E:setOrigin(Ply:pos())
+    E:play("ToolTracer")
+    
+    I = I + 1
+}
+
+
+event playerConnected(Ply:entity){
+    Players:pushEntity(Ply)
+    EffectsPool:pushEffect(effect())
+}
+
+event playerDisconnected(Ply:entity) {
+    for(I = 1, Players:count(), 1){
+        if(Players[I, entity] == Ply){
+            Players:removeEntity(I)
+            EffectsPool:popEffect()            
+            break
+        }
+    }
+}
+
+
+if(first()){main()}
+tick_()
+timer("tick", 250)
