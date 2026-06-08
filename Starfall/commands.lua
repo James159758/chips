@@ -78,7 +78,7 @@ local mainServer = function()
         elseif data["flag"] == "tp" then
             owner():setPos(data["ply"]:getPos()+Vector(0, 50, 0))
         elseif data["flag"] == "kill" then
-            data["target"]:applyDamage(math.huge, data["attacker"], nil, nil, nil)
+            data["target"]:applyDamage(math.huge, data["attacker"], chip(), nil, nil)
         end
         
     end)
