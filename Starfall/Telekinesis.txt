@@ -62,13 +62,12 @@ local mainClient = function()
     
     
     local function isWeapon(ply)
-        local _find = "crowbar.mdl"
+        local _find = "weapon_crowbar"
         local suc, resu = pcall(function()
-                              local weaponEntity = ply:getActiveWeapon()
-                              local weaponModel = weaponEntity:getModel()
-                            return string.endsWith(weaponModel, _find)
+                              local currentWeapon = ply:getActiveWeapon()
+                              local currentWeaponClass = currentWeapon:getClass()
+                            return currentWeaponClass == _find
                           end)
-
         return resu
     end
     
@@ -117,7 +116,12 @@ local mainServer = function()
         local isOwnerEntity = (entityEye:getOwner() == ply)
         local isFrozen = not (entityEye:isFrozen())
         local isAlreadyExist = not table.hasValue(GrabbedProps, entityEye)
-        
+        if isOwnerEntity and (not isFrozen) then
+            entityEye:getPhysicsObject():wake()
+            entityEye:enableMotion(true)
+            isFrozen = not (entityEye:isFrozen())
+        end
+
         if(isOwnerEntity and isFrozen and isAlreadyExist) then
             table.insert(GrabbedProps, entityEye)
         end
@@ -154,7 +158,7 @@ local mainServer = function()
             local newVector = Vector(ORBIT["Distance"] * _cos(OffsetAngle),
                                      ORBIT["Distance"] * _sin(OffsetAngle),
                                      ORBIT["Height"])
-            local TargetPos =  owner():getPos() + newVector
+            local TargetPos =  owner():getPos() + newVector 
             
             local succ, result = pcall(
                  function()
