@@ -1,0 +1,66 @@
+--@server
+
+local maxReflections = 5
+local maxDistance = 1000000
+local tracePool = {}
+
+local function drawLine(startPos, endPos, entity)
+    local index = #tracePool+1
+    tracePool[index] = {
+        startPos = startPos,
+        endPos = endPos,
+        entity = entity
+    }
+end
+
+hook.add("KeyPress", "LaserBounce_Press", function(ply, key)
+    if ply ~= owner() then return end
+    if key ~= IN_KEY.ATTACK2 then return end
+    tracePool = {}
+    
+    local eyeTrace = ply:getEyeTrace()
+    local currentPos = eyeTrace.HitPos
+    
+    local incomingDir = eyeTrace.Normal
+    local hitNormal = eyeTrace.HitNormal
+    
+    local currentDir = incomingDir - 2 * incomingDir:dot(hitNormal) * hitNormal
+    
+    drawLine(ply:getPos(), eyeTrace.HitPos, eyeTrace.Entity)
+    
+    if not eyeTrace.Hit then return end
+    
+    currentPos = currentPos + (hitNormal * 0.1)
+    
+    for i = 1, maxReflections do
+        local tr = trace.line(currentPos, currentPos + (currentDir * maxDistance), {chip(), ply}, 33570753)
+        
+        drawLine(currentPos, tr.HitPos, tr.Entity)
+        
+        if not tr.Hit then break end
+        
+        local N = tr.HitNormal
+        currentDir = currentDir - 2 * currentDir:dot(N) * N
+        currentPos = tr.HitPos + (N * 0.1)
+    end
+end)
+
+hook.add("KeyRelease", "LaserBounce_Release", function(ply, key)
+    if ply ~= owner() then return end
+    if key ~= IN_KEY.ATTACK2 then return end
+end)
+
+
+timer.create("trace", 0.05, 0, function()
+    if #tracePool == 0 then return end
+    local traceTable = table.remove(tracePool, 1)
+    
+    local e = effect.create()
+    e:setStart(traceTable.startPos)
+    e:setOrigin(traceTable.endPos)
+    e:play("ToolTracer")
+    e:play("cball_explode")
+
+    
+    //effect.beamRingPoint(traceTable.endPos, 60, 10, 1, 5, 0, Color(math.random(255), math.random(255), math.random(255), math.random(255)), 0, nil, nil, nil)
+end)
